@@ -38,18 +38,57 @@ To run the CLI on real FlairHUB aerial patches (D034, Hérault /
 Montpellier, 512x512 @ 0.2m):
 
 ```bash
+# Optional: set ATOMIZER_BUCKET to your private HF bucket so the script
+# fetches the 2.1 GB metadata zip and the 4.7 GB RGBI zip from there
+# instead of the public IGNF/FLAIR-HUB dataset.
+export ATOMIZER_BUCKET=buckets/NoeFlandre/atomizer-text
 uv run python scripts/fetch_sample_tiles.py
 ```
 
-This downloads `D034-2021_AERIAL_RGBI_IMS.zip` from
-`IGNF/FLAIR-HUB` on Hugging Face and extracts three named patches into
-`data/sample_tiles/{residential,office,mixed}.tif`. The script is a
-one-off data-prep utility, **not** part of the test suite.
+The script downloads the source zips into a hidden temp dir under
+`data/`, extracts three named patches (one per category target:
+`residential` near Castelnau-le-Lez, `office` near Port Marianne /
+Antigone, `mixed` on the peri-urban SW fringe) into
+`data/sample_tiles/{residential,office,mixed}.tif`, then deletes the
+temp dir. Net local footprint: 3 small patches (~1 MB each).
 
-> The first run downloads the whole domain ZIP (~hundreds of MB). For
-> quick exploration the `tests/fixtures/tiny.tif` and the offline
-> fetcher in `scripts/offline_fetcher.py` are enough to exercise the
-> pipeline without network access.
+The script is a one-off data-prep utility, **not** part of the test
+suite.
+
+> The first run downloads ~7 GB of zips (sequentially, with the temp
+> dir cleaned between). For quick exploration the
+> `tests/fixtures/tiny.tif` and the offline fetcher in
+> `scripts/offline_fetcher.py` are enough to exercise the pipeline
+> without any data download.
+
+### Reproducing the published v1 results end-to-end
+
+```bash
+# 1. Install deps.
+uv sync
+
+# 2. (Optional) Mirror the public bucket locally so the source zips
+#    are available without hitting the upstream IGNF/FLAIR-HUB dataset.
+hf sync hf://buckets/NoeFlandre/atomizer-text ./bucket
+
+# 3. Extract the 3 representative tiles into data/sample_tiles/.
+ATOMIZER_BUCKET=buckets/NoeFlandre/atomizer-text \
+    uv run python scripts/fetch_sample_tiles.py
+
+# 4. Run the CLI on each tile. Default fetcher hits the public Overpass
+#    API; first call per tile takes a few seconds.
+for tile in residential office mixed; do
+    uv run python -m atomizer_osm_pilot.cli \
+        --raster data/sample_tiles/$tile.tif \
+        --out-dir results/$tile \
+        --osm-tags building,highway,landuse,shop,office,amenity,natural,waterway,leisure
+done
+```
+
+After step 4, `results/{residential,office,mixed}/` should be
+byte-identical to the version published in the bucket. See the
+"Results & interpretation" section below for what to make of the
+numbers.
 
 ---
 
@@ -169,8 +208,29 @@ touching call sites.
 ## Results & interpretation
 
 This pilot is designed to answer three feasibility questions before any
-embedding/training work starts. For each of the three sample tiles
-(`residential`, `office`, `mixed`):
+embedding/training work starts. The published v1 numbers for the 3
+D034 / Hérault tiles are:
+
+| tile          | coverage | dominant building tag                          | top non-building tag                                       | vocab size (keys / k,v pairs) |
+|---------------|---------:|------------------------------------------------|------------------------------------------------------------|-------------------------------|
+| `residential` |   17.6 % | `building=yes` (no further info)               | `wall`, `leisure`                                          | 12 / 15                       |
+| `office`      |   32.5 % | `building=yes` (+ `building:levels=8/9`)       | `highway`, `name`, `natural`, `maxspeed`, `amenity`        | 46 / 93                       |
+| `mixed`       |    1.1 % | `building=yes`                                 | `highway`, `oneway`, `surface`                             | 14 / 17                       |
+
+**Headline finding:** the residential-vs-office contrast that the whole
+Atomizer-text pilot depends on is **not present in OSM at 0.2 m over
+Montpellier** — every building in all three tiles is tagged
+`building=yes` (a generic "yes, this is a building" stamp with no
+type information). The discriminative signal in the office tile is
+its road network and amenity tags, not its building types. This means
+either (a) the study area needs to move to a region with richer
+building tags (e.g. parts of Germany, where `building=residential` /
+`building=apartments` are used consistently), or (b) the embedding
+target has to shift from "building type" to "block context" (road
+network + amenities), or (c) a non-OSM source like BD TOPO
+`usage_1` / `usage_2` has to be added to the fetcher.
+
+For each tile, the three feasibility questions are:
 
 1. **At what image resolution does a pixel correspond to something OSM
    can meaningfully label?** The FlairHUB BD ORTHO patches are 512x512
@@ -223,16 +283,46 @@ with finer-grained building tags (e.g. parts of Germany, where
 - No web UI. CLI only.
 - Taxonomy is data-driven (`taxonomy.RULES`) but not yet YAML-loaded.
 
-## File map (output of `find`)
+## File map
 
 ```
 atomizer-text/
 ├── pyproject.toml
 ├── README.md                          (this file)
-├── src/atomizer_osm_pilot/            (8 modules, ~600 LOC)
+├── LICENSE                            (MIT)
+├── src/atomizer_osm_pilot/            (9 modules, ~700 LOC)
+│   ├── __init__.py
+│   ├── _env.py
+│   ├── raster_io.py
+│   ├── taxonomy.py
+│   ├── osm_fetch.py
+│   ├── rasterize.py
+│   ├── tag_records.py
+│   ├── stats.py
+│   ├── visualize.py
+│   └── cli.py
 ├── tests/                             (8 test files, 38 tests, all offline)
 ├── scripts/
 │   ├── fetch_sample_tiles.py          (Amendment 3, not in pytest)
 │   └── offline_fetcher.py             (synthetic fetcher for the CLI)
-└── data/sample_tiles/                 (gitignored; populated by fetch_sample_tiles.py)
+└── data/
+    ├── README.md                      (mirror of the HF bucket dataset card)
+    └── sample_tiles/                  (gitignored; populated by fetch_sample_tiles.py)
 ```
+
+## Remotes and data
+
+- **GitHub** [`NoeFlandre/atomizer-text`](https://github.com/NoeFlandre/atomizer-text):
+  source code, tests, scripts, README, the dataset card copy under
+  `data/README.md`. Push with `git push`.
+- **HF bucket** `buckets/NoeFlandre/atomizer-text`:
+  the canonical data and outputs store. Holds the 3 sample tiles, the
+  9 CLI outputs, the 2 source zips mirrored from
+  [`IGNF/FLAIR-HUB`](https://huggingface.co/datasets/IGNF/FLAIR-HUB),
+  and a `README.md` dataset card. Mirror locally with
+  `hf sync hf://buckets/NoeFlandre/atomizer-text ./bucket`.
+
+Total local on-disk footprint after a full run: ~6 MB
+(`data/sample_tiles/*.tif` + `results/*`). The 6.88 GB of source zips
+live only in the bucket.
+
