@@ -1,0 +1,15 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.coverage
+htmlcov/
+.venv/
+.DS_Store
+.cache/
+# Local copies of large datasets; HF bucket is the source of truth.
+data/*.zip
+data/GLOBAL_ALL_MTD/
+data/D034-2021_AERIAL_RGBI/
+data/sample_tiles/
+tests/fixtures/tiny.tif
