@@ -6,6 +6,7 @@ inject a fake ``fetcher`` callable (see :func:`fake_fetcher` in
 """
 from __future__ import annotations
 
+import math
 from typing import Callable, Iterable, Tuple
 
 import geopandas as gpd
@@ -13,6 +14,13 @@ import geopandas as gpd
 
 Fetcher = Callable[[Tuple[float, float, float, float], Iterable[str]],
                    gpd.GeoDataFrame]
+
+
+def _is_nan(x) -> bool:
+    try:
+        return isinstance(x, float) and math.isnan(x)
+    except Exception:
+        return False
 
 
 def _default_fetcher(bbox_wgs84: Tuple[float, float, float, float],
@@ -38,9 +46,21 @@ def _default_fetcher(bbox_wgs84: Tuple[float, float, float, float],
             "osmnx>=1.2 or inject a fetcher explicitly."
         )
     gdf = fn(bbox=bbox, tags=tags)
-    # Ensure expected columns exist.
-    if "tags" not in gdf.columns:
-        gdf = gdf.assign(tags=[{} for _ in range(len(gdf))])
+    # Normalize tags. osmnx 2.x flattens OSM tags into individual columns
+    # of the GeoDataFrame; older versions / Overpass returned a single
+    # ``tags`` column containing the dict. Rebuild a per-row tags dict
+    # in either case.
+    if "tags" in gdf.columns and isinstance(gdf["tags"].iloc[0], dict):
+        tags_series = gdf["tags"]
+    else:
+        skip = {"geometry", "osmid", "element_type", "nodes"}
+        cols = [c for c in gdf.columns if c not in skip]
+        tags_series = gdf[cols].apply(
+            lambda row: {c: row[c] for c in cols
+                         if row[c] is not None and not _is_nan(row[c])},
+            axis=1,
+        )
+    gdf = gdf.assign(tags=tags_series.values)
     if gdf.crs is None:
         gdf = gdf.set_crs("EPSG:4326")
     else:
