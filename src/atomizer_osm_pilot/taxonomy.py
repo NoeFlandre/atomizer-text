@@ -44,10 +44,6 @@ class Category(IntEnum):
 CATEGORIES: tuple[Category, ...] = tuple(Category)
 
 
-# ---------------------------------------------------------------------------
-# Rule list
-# ---------------------------------------------------------------------------
-
 @dataclass(frozen=True)
 class Rule:
     """A single taxonomy rule: when ``matches(tags)`` is true, assign

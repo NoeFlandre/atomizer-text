@@ -169,7 +169,6 @@ def main() -> int:
     # sequentially and clean up after each.
     tmp_path = Path(tempfile.mkdtemp(prefix=".cache_", dir="data"))
     try:
-        # --- Phase 1: download metadata, find the 3 patches to extract ---
         print(f"Downloading {MTD_ZIP} ...")
         mtd = _download(tmp_path, MTD_ZIP)
         print(f"  -> {mtd} ({mtd.stat().st_size / 1e6:.1f} MB)")
@@ -193,14 +192,12 @@ def main() -> int:
                     print(f"  {label}: nearest {pick} (centroid {px:.4f}, {py:.4f})")
                     break
 
-        # Free the metadata zip before we download the big one.
         del mtd
         mtd_path = tmp_path / "data" / "GLOBAL_ALL_MTD.zip"
         if mtd_path.exists():
             mtd_path.unlink()
         gc.collect() if False else None  # best-effort
 
-        # --- Phase 2: download RGBI zip and extract the picked patches ---
         print(f"\nDownloading {RGBI_ZIP} ...")
         rgbi = _download(tmp_path, RGBI_ZIP)
         print(f"  -> {rgbi} ({rgbi.stat().st_size / 1e6:.1f} MB)")
@@ -222,7 +219,6 @@ def main() -> int:
     finally:
         shutil.rmtree(tmp_path, ignore_errors=True)
 
-    # Re-list outputs (the temp dir is gone, but the extracted files remain).
     extracted = sorted(out_dir.glob("*.tif"))
     if not extracted:
         print("ERROR: no tiles were extracted.", file=sys.stderr)

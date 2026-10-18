@@ -41,7 +41,6 @@ def _normalize_rgb(data: np.ndarray) -> np.ndarray:
     elif data.shape[0] >= 3:
         rgb = data[:3]
     else:
-        # e.g. 2-band: pad to 3 by repeating the first band.
         rgb = np.concatenate([data, np.repeat(data[-1:], 3 - data.shape[0],
                                               axis=0)], axis=0)
     # Normalize per-band to 0..255 for display.
@@ -91,12 +90,10 @@ def render_overlay(
 
     fig, axes = plt.subplots(1, 3, figsize=(15, 5))
 
-    # (a) RGB
     axes[0].imshow(rgb_disp)
     axes[0].set_title("RGB")
     axes[0].axis("off")
 
-    # (b) categorical map
     im = axes[1].imshow(cat_map, cmap=cmap, norm=norm, interpolation="nearest")
     axes[1].set_title("OSM tag map")
     axes[1].axis("off")
@@ -107,7 +104,6 @@ def render_overlay(
     axes[1].legend(handles=legend_handles, bbox_to_anchor=(1.02, 1.0),
                    loc="upper left", fontsize=7, frameon=False)
 
-    # (c) RGB + OSM outlines
     axes[2].imshow(rgb_disp)
     if gdf is not None and len(gdf) > 0 and "category_id" in gdf.columns:
         for _, row in gdf.iterrows():

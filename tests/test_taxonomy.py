@@ -82,10 +82,6 @@ def test_building_priority_over_road_when_both_present():
     assert map_tags_to_category(tags) is Category.RESIDENTIAL_BUILDING
 
 
-# ---------------------------------------------------------------------------
-# RASTER_PRIORITY (Amendment 1)
-# ---------------------------------------------------------------------------
-
 def test_raster_priority_keys_match_categories():
     for c in CATEGORIES:
         assert c in RASTER_PRIORITY, f"missing RASTER_PRIORITY entry for {c}"

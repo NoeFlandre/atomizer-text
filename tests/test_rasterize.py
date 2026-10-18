@@ -20,7 +20,6 @@ def test_rasterize_empty_gdf(synthetic_raster):
 
 
 def test_rasterize_one_building_covers_everywhere(synthetic_raster):
-    # Place a building that covers the whole raster.
     t = synthetic_raster.transform
     full = box(t.c, t.f - 50 * t.a, t.c + 50 * t.a, t.f)
     gdf = gpd.GeoDataFrame(
@@ -60,7 +59,7 @@ def test_rasterize_building_wins_over_landuse_overlap(synthetic_raster):
     expected_l = int(Category.AGRICULTURAL_LAND)
     # Find a pixel inside the building footprint.
     # Building spans cols 2..12 (px=0.5m) and rows 2..10.
-    b_pixel = cat_map[5, 5]  # row 5, col 5
+    b_pixel = cat_map[5, 5]
     assert b_pixel == expected_b
     # A pixel in landuse-only territory.
     l_pixel = cat_map[30, 30]

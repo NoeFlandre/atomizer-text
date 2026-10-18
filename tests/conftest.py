@@ -21,10 +21,6 @@ from rasterio.transform import Affine
 from atomizer_osm_pilot.raster_io import RasterInfo
 
 
-# ---------------------------------------------------------------------------
-# Synthetic rasters
-# ---------------------------------------------------------------------------
-
 # UTM 31N (EPSG:32631), covering France. ~0.5 m per pixel, 50x50 = ~25 m tile.
 # Origin in projected meters (easting, northing).
 _UTM_CRS = "EPSG:32631"
@@ -74,10 +70,6 @@ def synthetic_raster() -> RasterInfo:
 def synthetic_raster_wgs84() -> RasterInfo:
     return _synthetic_wgs84()
 
-
-# ---------------------------------------------------------------------------
-# Synthetic GeoDataFrame
-# ---------------------------------------------------------------------------
 
 @pytest.fixture
 def synthetic_gdf(synthetic_raster):
@@ -146,10 +138,6 @@ def fake_fetcher(synthetic_gdf):
         return synthetic_gdf.to_crs("EPSG:4326").copy()
     return _fetcher
 
-
-# ---------------------------------------------------------------------------
-# Tiny on-disk GeoTIFF used by the CLI smoke test
-# ---------------------------------------------------------------------------
 
 @pytest.fixture(scope="session")
 def tiny_tif_path(tmp_path_factory) -> Path:
