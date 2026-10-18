@@ -41,14 +41,12 @@ def rasterize_features(
         - ``burn_priority`` (int): the value from :data:`RASTER_PRIORITY`
           used to sort the burn order.
     """
-    # Reproject to raster CRS.
     if gdf.crs is None:
         gdf = gdf.set_crs("EPSG:4326")
     if str(gdf.crs) != str(raster_info.crs):
         gdf = gdf.to_crs(raster_info.crs)
     gdf = gdf.reset_index(drop=True).copy()
 
-    # Assign category + burn priority per feature.
     gdf["category_id"] = gdf["tags"].apply(
         lambda t: int(map_tags_to_category(t if isinstance(t, dict) else {}))
     )

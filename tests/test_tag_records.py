@@ -27,9 +27,6 @@ def test_build_records_empty(synthetic_raster):
 def test_build_records_two_features(synthetic_raster):
     cat_map = np.zeros((synthetic_raster.height, synthetic_raster.width),
                        dtype=np.int32)
-    # Use the synthetic_gdf via the rasterize pipeline so the GDF is in the
-    # same CRS and the tag categories are populated. For this test we just
-    # pass a small hand-built GDF.
     t = synthetic_raster.transform
     px = t.a
     origin_x, origin_y = t.c, t.f
@@ -53,7 +50,7 @@ def test_build_records_two_features(synthetic_raster):
         assert r["pixel_count"] > 0
         assert isinstance(r["raw_tags"], dict)
         assert r["centroid_xy"] is not None
-        assert r["raw_tags"] is not gdf.iloc[0]["tags"]  # copy, not same ref
+        assert r["raw_tags"] is not gdf.iloc[0]["tags"]
 
 
 def test_raw_tags_are_copied_not_mutated(synthetic_raster):

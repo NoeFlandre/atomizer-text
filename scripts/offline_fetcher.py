@@ -28,7 +28,7 @@ def offline_fetcher(bbox_wgs84, tag_keys):
     south, west, north, east = bbox_wgs84
     cx = 0.5 * (west + east)
     cy = 0.5 * (south + north)
-    dx = (east - west) * 0.30  # 30% of bbox width
+    dx = (east - west) * 0.30
     dy = (north - south) * 0.20
 
     building = box(cx - dx, cy - dy, cx - dx * 0.2, cy + dy * 0.5)
