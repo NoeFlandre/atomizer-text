@@ -50,7 +50,7 @@ def test_build_records_two_features(synthetic_raster):
         assert r["pixel_count"] > 0
         assert isinstance(r["raw_tags"], dict)
         assert r["centroid_xy"] is not None
-        assert r["raw_tags"] is not gdf.iloc[0]["tags"]
+        assert r["raw_tags"] is not gdf.iloc[0]["tags"]  # copy, not same ref
 
 
 def test_raw_tags_are_copied_not_mutated(synthetic_raster):
